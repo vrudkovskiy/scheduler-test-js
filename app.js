@@ -24,21 +24,6 @@ function setupServer() {
   app.use(cookieParser());
   app.use(express.static(path.join(__dirname, 'public')));
 
-  // catch 404 and forward to error handler
-  app.use((req, res, next) => {
-    next(createError(404));
-  });
-
-  // error handler
-  app.use((err, req, res) => {
-    // set locals, only providing error in development
-    res.locals.message = err.message;
-    res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-    // render the error page
-    res.status(err.status || 500).send({ error: err });
-  });
-
   return app;
 }
 
@@ -95,6 +80,23 @@ function startMessageHandling(messageHandler) {
   };
 }
 
+function notFountErrorHandler() {
+  return (req, res, next) => {
+    next(createError(404));
+  };
+}
+
+function errorHandler() {
+  return (err, req, res) => {
+    // set locals, only providing error in development
+    res.locals.message = err.message;
+    res.locals.error = req.app.get('env') === 'development' ? err : {};
+
+    // render the error page
+    res.status(err.status || 500).send({ error: err });
+  };
+}
+
 commander
   .option('-p, --port <n>', 'Listened port', parseInt)
   .parse(process.argv);
@@ -113,6 +115,9 @@ Database.connect('localhost', 6379)
     app.get('/test_handleEarliest', testHandleEarliest(repository));
     app.get('/test_stopWatching', stopMessageHandling(messageHandler));
     app.get('/test_startWatching', startMessageHandling(messageHandler));
+
+    app.use(notFountErrorHandler());
+    app.use(errorHandler());
 
     const port = commander.port || DEFAULT_PORT;
     app.listen(port, () => {
