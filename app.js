@@ -3,44 +3,23 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-const ScheduledMessageRepository = require('./src/ScheduledMessageRepository');
-const ScheduledMessage = require('./src/ScheduledMessage');
+const commander = require('commander');
+const MessageRepository = require('./src/MessageRepository');
+const Message = require('./src/Message');
+const MessageHandler = require('./src/MessageHandler');
+
+const DEFAULT_PORT = 3000;
+
+commander
+  .option('-p, --port <n>', 'Listened port', parseInt)
+  .parse(process.argv);
 
 const app = express();
-let watchInterval = null;
 
-function processMessages(repository) {
-  return repository.pop(new Date())
-    .then((messages) => {
-      if (messages.length === 0) {
-        return Promise.resolve();
-      }
-
-      messages.forEach((message) => {
-        console.log(`[ Message ]: ${message}`);
-      });
-
-      return processMessages(repository);
-    });
-}
-
-function stopWatching() {
-  if (watchInterval) {
-    clearInterval(watchInterval);
-  }
-}
-
-function restartWatching(repository) {
-  stopWatching();
-
-  watchInterval = setInterval(() => {
-    processMessages(repository);
-  }, 1000);
-}
-
-ScheduledMessageRepository.connect('localhost', 6379)
+MessageRepository.connect('localhost', 6379)
   .then((repository) => {
-    restartWatching(repository);
+    const messageHandler = new MessageHandler(repository);
+    messageHandler.restart();
 
     // view engine setup
     app.set('views', path.join(__dirname, 'views'));
@@ -53,7 +32,7 @@ ScheduledMessageRepository.connect('localhost', 6379)
     app.use(express.static(path.join(__dirname, 'public')));
 
     app.post('/echoAtTime', (req, res) => {
-      const message = ScheduledMessage.parse(req.body);
+      const message = Message.parse(req.body);
       message.dateTime.setHours(message.dateTime.getHours() + 1);
 
       repository.add(message)
@@ -84,14 +63,14 @@ ScheduledMessageRepository.connect('localhost', 6379)
     });
 
     app.get('/test_stopWatching', (req, res) => {
-      stopWatching();
+      messageHandler.stop();
 
       res.setHeader('Content-Type', 'application/json');
       res.end('{}');
     });
 
     app.get('/test_startWatching', (req, res) => {
-      restartWatching(repository);
+      messageHandler.restart();
 
       res.setHeader('Content-Type', 'application/json');
       res.end('{}');
@@ -112,7 +91,10 @@ ScheduledMessageRepository.connect('localhost', 6379)
       res.status(err.status || 500).send({ error: err });
     });
 
-    app.listen(3000, () => { console.log('Started listening'); });
+    const port = commander.port || DEFAULT_PORT;
+    app.listen(port, () => {
+      console.log(`Started listening on port ${port}`);
+    });
   });
 
 module.exports = app;

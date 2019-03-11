@@ -3,9 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./app.js"
+    "start": "node ./app.js",
+    "start1": "node ./app.js --port=3001",
+    "start2": "node ./app.js --port=3002"
   },
   "dependencies": {
+    "commander": "^2.19.0",
     "cookie-parser": "~1.4.3",
     "debug": "~2.6.9",
     "express": "~4.16.0",

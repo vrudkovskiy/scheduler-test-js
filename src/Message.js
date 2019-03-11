@@ -1,6 +1,6 @@
 const assert = require('./utils/assert');
 
-class ScheduledMessage {
+class Message {
   static parse(json) {
     assert((json instanceof Object) || (json instanceof String));
 
@@ -9,7 +9,7 @@ class ScheduledMessage {
       : JSON.parse(json);
 
     const date = new Date(jsonObj.dateTime);
-    return new ScheduledMessage(date, jsonObj.text);
+    return new Message(date, jsonObj.text);
   }
 
   constructor(dateTime, text) {
@@ -22,4 +22,4 @@ class ScheduledMessage {
   }
 }
 
-module.exports = ScheduledMessage;
+module.exports = Message;

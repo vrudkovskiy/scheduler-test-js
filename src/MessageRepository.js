@@ -4,12 +4,12 @@ const assert = require('./utils/assert');
 const DATETIME_SET_NAME = 'dates';
 const MESSAGES_LIST_PREFIX = 'messages';
 
-class ScheduledMessageRepository {
+class MessageRepository {
   static connect(host, port) {
     return new Promise((resolve, reject) => {
       const client = redis.createClient(port, host);
       client.on('connect', () => {
-        const storage = new ScheduledMessageRepository(client);
+        const storage = new MessageRepository(client);
         resolve(storage);
       });
       client.on('error', reject);
@@ -132,9 +132,11 @@ class ScheduledMessageRepository {
       transaction.del(listKey);
       // TODO: Check that it is not performed if watched list changed.
       transaction.zremrangebyscore(DATETIME_SET_NAME, timestamp, timestamp);
-      transaction.exec((error) => {
+      transaction.exec((error, resultArray) => {
         if (error) {
           reject(new Error(`Error while clearing message data: ${error.message}`));
+        } else if (!resultArray) {
+          reject(new Error('Cannot clear message data, cause it was modified by other component'));
         } else {
           resolve();
         }
@@ -143,4 +145,4 @@ class ScheduledMessageRepository {
   }
 }
 
-module.exports = ScheduledMessageRepository;
+module.exports = MessageRepository;
